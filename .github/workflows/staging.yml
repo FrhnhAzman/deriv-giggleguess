@@ -1,0 +1,37 @@
+name: Staging CI & Build Verification
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+  pull_request:
+    branches:
+      - staging
+      - main
+
+jobs:
+  build-and-test:
+    name: Build & Verify Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter & Type Check
+        run: npm run lint
+
+      - name: Build Staging Applet
+        run: npm run build
+        env:
+          NODE_ENV: production
