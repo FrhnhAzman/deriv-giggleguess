@@ -7,12 +7,22 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { RoomState, Player, Story, Vote, GamePhase, OfficeLeaderboardEntry, OFFICES, AVATARS } from "./src/types";
+import { OFFICES, AVATARS } from "./src/types.ts";
+import type { RoomState, Player, OfficeLeaderboardEntry } from "./src/types.ts";
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+const jsonParser = express.json();
+app.use((req, res, next) => {
+  // Vercel's Node helper may populate req.body before Express runs. Avoid
+  // reading the already-consumed request stream a second time.
+  if (req.body !== undefined) {
+    next();
+    return;
+  }
+  jsonParser(req, res, next);
+});
 
 const PORT = Number(process.env.PORT) || 3000;
 

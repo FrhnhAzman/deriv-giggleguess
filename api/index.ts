@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 
-let appPromise: Promise<typeof import("../server").default> | null = null;
+let appPromise: Promise<typeof import("../server.ts").default> | null = null;
 
 function loadApp() {
-  appPromise ??= import("../server").then(module => module.default);
+  appPromise ??= import("../server.ts").then(module => module.default);
   return appPromise;
 }
 
