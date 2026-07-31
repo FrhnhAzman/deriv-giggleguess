@@ -124,15 +124,19 @@ export default function GameClient({
     setError(null);
     try {
       const res = await fetch("/api/rooms", { method: "POST" });
-      if (res.ok) {
-        const createdRoom: RoomState = await res.json();
-        await joinRoomAPI(createdRoom.roomCode);
-        onRoomCreatedOrJoined(createdRoom.roomCode);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `Playground service unavailable (${res.status}).`);
       }
+
+      const createdRoom: RoomState = await res.json();
+      await joinRoomAPI(createdRoom.roomCode);
+      onRoomCreatedOrJoined(createdRoom.roomCode);
     } catch (err: any) {
-      setError("Failed to initialize playground. Try again.");
+      setError(err?.message || "Failed to initialize playground. Try again.");
+    } finally {
+      setIsConnecting(false);
     }
-    setIsConnecting(false);
   };
 
   // Join existing Room (Lobby)
@@ -143,9 +147,10 @@ export default function GameClient({
     try {
       await joinRoomAPI(code.trim().toUpperCase());
     } catch (err: any) {
-      setError("Failed to sync device. Check code and try again.");
+      setError(err?.message || "Failed to sync device. Check code and try again.");
+    } finally {
+      setIsConnecting(false);
     }
-    setIsConnecting(false);
   };
 
   const joinRoomAPI = async (code: string) => {
@@ -155,30 +160,35 @@ export default function GameClient({
       body: JSON.stringify({ playerId })
     });
 
-    if (res.ok) {
-      const { room: joinedRoom } = await res.json();
-      setRoom(joinedRoom);
-      playSound.roomJoined();
-      
-      // Auto-set the custom profile if defaults were supplied
-      if (defaultName) {
-        await fetch(`/api/rooms/${code}/profile`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            playerId,
-            name: defaultName,
-            isTeamPlay: !!defaultTeam,
-            teamName: defaultTeam || "",
-            office: defaultOffice || "Cyberjaya",
-            avatar: defaultAvatar || "Cyber-Robot",
-            isReady: false
-          })
-        });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || `Unable to join playground (${res.status}).`);
+    }
+
+    const { room: joinedRoom } = await res.json();
+    setRoom(joinedRoom);
+    playSound.roomJoined();
+
+    // Auto-set the custom profile if defaults were supplied
+    if (defaultName) {
+      const profileRes = await fetch(`/api/rooms/${code}/profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId,
+          name: defaultName,
+          isTeamPlay: !!defaultTeam,
+          teamName: defaultTeam || "",
+          office: defaultOffice || "Cyberjaya",
+          avatar: defaultAvatar || "Cyber-Robot",
+          isReady: false
+        })
+      });
+
+      if (!profileRes.ok) {
+        const data = await profileRes.json().catch(() => null);
+        throw new Error(data?.error || `Unable to save player profile (${profileRes.status}).`);
       }
-    } else {
-      const data = await res.json();
-      setError(data.error || "Room not found.");
     }
   };
 
