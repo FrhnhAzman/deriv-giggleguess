@@ -9,7 +9,7 @@ import { Users, Smartphone, RefreshCw, Layers, Sparkles, HelpCircle, AlertCircle
 
 export default function App() {
   // Option: 'single' | 'quad'
-  const [viewMode, setViewMode] = useState<'single' | 'quad'>('quad'); // Default to 'quad' so the user can immediately see the 4 screens they requested!
+  const [viewMode, setViewMode] = useState<'single' | 'quad'>('single'); // Single screen view by default
 
   // The primary player ID for Single Mode
   const [singlePlayerId] = useState<string>(() => {

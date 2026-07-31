@@ -6,8 +6,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Users, Bot, Shield, ShieldAlert, Award, ArrowRight, ArrowLeft, CheckCircle2, 
-  HelpCircle, Camera, AlertTriangle, Send, Landmark, RefreshCw, Trophy, Sparkles, Plus, Lock, Vote as VoteIcon
+  HelpCircle, Camera, AlertTriangle, Send, Landmark, RefreshCw, Trophy, Sparkles, Plus, Lock, Vote as VoteIcon,
+  Copy, Check, Share2, QrCode, Crown
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { motion, AnimatePresence } from "motion/react";
 import { RoomState, Player, Story, Vote, OFFICES, AVATARS, OfficeLeaderboardEntry } from "../types";
 
@@ -43,6 +45,7 @@ export function Screen1Gateway({
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [scanStatus, setScanStatus] = useState("Initializing camera...");
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const activePlayer = room?.players.find(p => p.id === playerId);
   const isHost = activePlayer?.isHost || false;
@@ -59,7 +62,6 @@ export function Screen1Gateway({
         }
         // Simulate reading QR code after 3 seconds
         setTimeout(() => {
-          // Find any active simulated code or pick a default
           const simulatedCode = "DV-8841";
           setJoinCodeInput(simulatedCode);
           setScanStatus(`Found Room! Code: ${simulatedCode}`);
@@ -103,18 +105,29 @@ export function Screen1Gateway({
   }, [cameraStream]);
 
   // Self-referential join URL for the QR code
-  const joinUrl = `${window.location.origin}/?room=${room?.roomCode || ""}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=FF574A&bgcolor=1E2022&data=${encodeURIComponent(joinUrl)}`;
+  const joinUrl = typeof window !== "undefined" 
+    ? `${window.location.origin}${window.location.pathname}?room=${room?.roomCode || ""}`
+    : "";
+
+  const handleCopyLink = () => {
+    if (!joinUrl) return;
+    navigator.clipboard.writeText(joinUrl).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }).catch((err) => {
+      console.error("Failed to copy link:", err);
+    });
+  };
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-6">
+    <div className="flex-1 flex flex-col justify-between p-4 sm:p-6">
       <div className="space-y-6">
         {/* Core Branding */}
-        <div className="text-center space-y-2 mt-4">
+        <div className="text-center space-y-2 mt-2">
           <motion.h1 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-sans font-black text-3xl tracking-wider text-[#FF574A]"
+            className="font-sans font-black text-2xl sm:text-3xl tracking-wider text-[#FF574A]"
             id="main-title"
           >
             DERIV GIGGLEGUESS
@@ -130,52 +143,82 @@ export function Screen1Gateway({
         <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-[#FF574A]">
             <HelpCircle className="w-5 h-5 flex-shrink-0" />
-            <h2 className="font-sans font-bold text-xs tracking-wider uppercase text-white/80">HOW TO SYNC YOUR TEAMS:</h2>
+            <h2 className="font-sans font-bold text-xs tracking-wider uppercase text-white/80">HOW TO SCAN & PLAY:</h2>
           </div>
           <p className="text-xs text-white/70 leading-relaxed font-sans">
-            <strong className="text-white">Are you the first player?</strong><br />
-            Tap <span className="text-[#FF574A] font-semibold">"CREATE PLAYGROUND"</span> to instantly spawn a unique Room Code and QR Code. Share your screen or hold it up so your colleagues can scan it and join your session!
+            <strong className="text-white">Host a new game?</strong><br />
+            Tap <span className="text-[#FF574A] font-semibold">"CREATE PLAYGROUND"</span> to generate a unique room code & QR code. Hold up your screen so participants can scan and join instantly!
           </p>
           <p className="text-xs text-white/70 leading-relaxed font-sans pt-1 border-t border-white/5">
-            <strong className="text-white">Joining an existing room?</strong><br />
-            Use your camera to scan your colleague’s QR code, or manually type their 6-digit room code below to sync your device.
+            <strong className="text-white">Joining as a participant?</strong><br />
+            Scan the host's QR code with your phone camera, or enter their 6-digit room code below to sync your device.
           </p>
         </div>
 
         {/* Interactive Controls & Inputs */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-1">
           {!room ? (
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={onCreateRoom}
               disabled={isConnecting}
-              className="w-full py-4 bg-[#FF574A] hover:bg-[#e04c40] text-white rounded-xl font-sans font-extrabold text-sm tracking-widest uppercase shadow-lg shadow-[#FF574A]/20 flex items-center justify-center gap-2 transition duration-200"
+              className="w-full py-4 bg-[#FF574A] hover:bg-[#e04c40] text-white rounded-xl font-sans font-extrabold text-sm tracking-widest uppercase shadow-lg shadow-[#FF574A]/20 flex items-center justify-center gap-2 transition duration-200 cursor-pointer"
               id="create-playground-btn"
             >
               <Plus className="w-5 h-5" />
-              CREATE PLAYGROUND
+              CREATE PLAYGROUND (HOST)
             </motion.button>
           ) : (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4 text-center">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 text-center">
               {/* Host Waiting / Peer Waiting Visual */}
               {isHost ? (
-                <div className="space-y-3">
-                  <span className="text-[11px] font-mono tracking-widest text-[#FF574A] uppercase font-bold bg-[#FF574A]/10 px-2.5 py-1 rounded-full border border-[#FF574A]/20">
-                    🟢 PLAYGROUND CREATED!
-                  </span>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-mono tracking-widest text-[#FF574A] uppercase font-bold bg-[#FF574A]/10 px-3 py-1 rounded-full border border-[#FF574A]/20">
+                    <Crown className="w-3.5 h-3.5 text-[#FF574A]" />
+                    HOST CONTROL PANEL ACTIVE
+                  </div>
+
                   <div className="font-mono font-black text-2xl tracking-tight text-white select-all">
-                    Room ID: <span className="text-[#FF574A]">{room.roomCode}</span>
+                    ROOM CODE: <span className="text-[#FF574A] font-extrabold">{room.roomCode}</span>
                   </div>
-                  <div className="flex justify-center p-3 bg-white/5 rounded-lg w-44 h-44 mx-auto border border-white/10">
-                    <img 
-                      src={qrCodeUrl} 
-                      alt="Room QR Code" 
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                    />
+
+                  {/* Clean SVG QR Code inside a high-contrast white card */}
+                  <div className="space-y-2">
+                    <div className="p-3 bg-white rounded-2xl shadow-xl w-max mx-auto border-2 border-[#FF574A]/40 flex flex-col items-center">
+                      <QRCodeSVG 
+                        value={joinUrl} 
+                        size={160} 
+                        bgColor="#FFFFFF"
+                        fgColor="#141516"
+                        level="H"
+                        marginSize={1}
+                      />
+                    </div>
+                    <p className="text-[10px] font-mono text-white/50">
+                      Participants: Scan this QR code to join instantly!
+                    </p>
                   </div>
-                  <p className="text-[11px] text-white/60 font-mono">
-                    Waiting for peers to sync... Connected: <span className="text-white font-bold">{room.players.length} Player{room.players.length > 1 ? 's' : ' (You)'}</span>
+
+                  {/* Share Link Button */}
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full py-2.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-mono font-bold text-white/80 hover:text-white flex items-center justify-center gap-2 transition"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="text-emerald-400">INVITE LINK COPIED TO CLIPBOARD!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4 text-[#FF574A]" />
+                        <span>COPY SHAREABLE INVITE LINK</span>
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-[11px] text-white/60 font-mono pt-1 border-t border-white/5">
+                    Connected: <span className="text-white font-bold">{room.players.length} Player{room.players.length > 1 ? 's' : ' (You)'}</span>
                   </p>
                   
                   {/* Choose game rounds */}
@@ -186,7 +229,7 @@ export function Screen1Gateway({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => onUpdateRounds?.(3)}
-                        className={`py-2 px-1.5 rounded-xl border font-sans font-bold text-xs transition ${
+                        className={`py-2 px-1.5 rounded-xl border font-sans font-bold text-xs transition cursor-pointer ${
                           room.totalRounds === 3
                             ? "bg-[#FF574A] border-[#FF574A] text-white shadow-md shadow-[#FF574A]/10"
                             : "bg-white/5 border-white/10 text-white/60 hover:text-white"
@@ -196,7 +239,7 @@ export function Screen1Gateway({
                       </button>
                       <button
                         onClick={() => onUpdateRounds?.(5)}
-                        className={`py-2 px-1.5 rounded-xl border font-sans font-bold text-xs transition ${
+                        className={`py-2 px-1.5 rounded-xl border font-sans font-bold text-xs transition cursor-pointer ${
                           room.totalRounds === 5 || !room.totalRounds
                             ? "bg-[#FF574A] border-[#FF574A] text-white shadow-md shadow-[#FF574A]/10"
                             : "bg-white/5 border-white/10 text-white/60 hover:text-white"
@@ -211,29 +254,43 @@ export function Screen1Gateway({
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={onLockLobby}
-                      className="w-full py-3 mt-2 bg-[#FF574A] text-white rounded-xl font-sans font-bold text-xs tracking-wider uppercase hover:bg-[#e04c40] transition"
+                      className="w-full py-3.5 bg-[#FF574A] text-white rounded-xl font-sans font-black text-xs tracking-wider uppercase hover:bg-[#e04c40] shadow-lg shadow-[#FF574A]/20 transition cursor-pointer flex items-center justify-center gap-2"
                     >
-                      LOCK ROOM & BEGIN GAME
+                      <Lock className="w-4 h-4" />
+                      LOCK ROOM & BEGIN GAME (HOST)
                     </motion.button>
                   )}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <span className="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                    🟢 SYNCED TO PLAYGROUND
-                  </span>
-                  <div className="font-mono font-black text-2xl text-white">
-                    {room.roomCode}
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    🟢 PARTICIPANT SYNCED
                   </div>
-                  {/* Display selected game duration */}
+
+                  <div className="font-mono font-black text-2xl text-white">
+                    ROOM: <span className="text-[#FF574A]">{room.roomCode}</span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-2xl shadow-xl w-max mx-auto border-2 border-emerald-500/40">
+                    <QRCodeSVG 
+                      value={joinUrl} 
+                      size={140} 
+                      bgColor="#FFFFFF"
+                      fgColor="#141516"
+                      level="H"
+                      marginSize={1}
+                    />
+                  </div>
+
                   <div className="bg-white/5 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between text-[11px] text-white/60 font-mono">
                     <span>SELECTED DURATION:</span>
                     <span className="font-bold text-[#FF574A]">{room.totalRounds || 5} ROUNDS</span>
                   </div>
-                  <div className="py-6 flex flex-col items-center justify-center gap-3">
+
+                  <div className="py-4 flex flex-col items-center justify-center gap-3">
                     <RefreshCw className="w-8 h-8 text-[#FF574A] animate-spin" />
                     <p className="text-xs text-white/70 font-sans max-w-xs mx-auto">
-                      Waiting for Host to lock the room... Connected: <strong className="text-white">{room.players.length} Players</strong>
+                      Waiting for Host to lock the room and start... Connected: <strong className="text-white">{room.players.length} Players</strong>
                     </p>
                   </div>
                 </div>

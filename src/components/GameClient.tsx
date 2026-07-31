@@ -15,7 +15,7 @@ import {
   Screen7Leaderboard 
 } from "./Screens";
 import PlaygroundDirector from "./PlaygroundDirector";
-import { Trophy } from "lucide-react";
+import { Trophy, Crown, Users } from "lucide-react";
 import { playSound } from "../utils/audio";
 
 interface GameClientProps {
@@ -487,9 +487,20 @@ export default function GameClient({
 
         <div className="flex items-center gap-1.5">
           {room && (
-            <div className="flex flex-col items-end pr-1.5">
-              <span className="text-[7px] text-white/40 uppercase font-bold tracking-wider">Room</span>
-              <span className="font-mono text-[#FF574A] font-bold text-xs tracking-wider">{room.roomCode}</span>
+            <div className="flex items-center gap-2 pr-1">
+              {room.players.find(p => p.id === playerId)?.isHost ? (
+                <span className="text-[9px] bg-[#FF574A]/10 border border-[#FF574A]/20 text-[#FF574A] font-mono px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <Crown className="w-2.5 h-2.5 text-[#FF574A]" /> HOST
+                </span>
+              ) : (
+                <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5 text-emerald-400" /> PLAYER
+                </span>
+              )}
+              <div className="flex flex-col items-end">
+                <span className="text-[7px] text-white/40 uppercase font-bold tracking-wider">Room</span>
+                <span className="font-mono text-[#FF574A] font-bold text-xs tracking-wider">{room.roomCode}</span>
+              </div>
             </div>
           )}
           
