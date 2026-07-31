@@ -15,7 +15,7 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // In-memory databases
 const rooms: { [code: string]: RoomState } = {};
@@ -96,6 +96,11 @@ const AI_PEER_TEMPLATES = [
 // Get macro leaderboard
 app.get("/api/leaderboard", (req, res) => {
   res.json(macroLeaderboard);
+});
+
+// Used by deployments and monitoring to verify that the API function is live.
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
 });
 
 // Create Room
@@ -640,4 +645,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Vercel imports the Express app as a serverless function. Only open a network
+// port when this file is run as the standalone local/Node server.
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
