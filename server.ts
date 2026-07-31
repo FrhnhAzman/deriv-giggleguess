@@ -5,7 +5,6 @@
 
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { RoomState, Player, Story, Vote, GamePhase, OfficeLeaderboardEntry, OFFICES, AVATARS } from "./src/types";
@@ -627,6 +626,9 @@ app.post("/api/rooms/:code/reset", (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    // Vite and Rollup are development-only dependencies. Loading them lazily
+    // keeps their native bindings out of Vercel Function cold starts.
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
